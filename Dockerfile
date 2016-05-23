@@ -1,0 +1,16 @@
+FROM ubuntu:xenial
+
+MAINTAINER Manjunath A Kumatagi <mkumatag@in.ibm.com>
+
+VOLUME /usr/local/keystone/certs
+
+RUN apt-get update
+RUN apt-get install keystone crudini net-tools python-ldap python-ldaptor python-ldappool -y
+
+ADD entrypoint.sh /entrypoint.sh
+RUN chmod 750 /entrypoint.sh
+
+EXPOSE 35357
+EXPOSE 5000
+
+ENTRYPOINT ["/entrypoint.sh"]
