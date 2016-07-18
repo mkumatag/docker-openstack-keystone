@@ -2,7 +2,7 @@ FROM ubuntu:xenial
 
 MAINTAINER Manjunath A Kumatagi <mkumatag@in.ibm.com>
 
-VOLUME /usr/local/keystone/certs
+VOLUME /usr/local/keystone
 
 RUN apt-get update
 RUN apt-get install keystone crudini net-tools python-ldap python-ldaptor python-ldappool -y

@@ -7,9 +7,25 @@ if [ -z "$ADMIN_TOKEN" ]; then
     exit 1
 fi
 
+CONTAINER_KS_VOL="/usr/local/keystone"
+
+if [ -f $CONTAINER_KS_VOL/keystone.conf ]; then
+    cp $CONTAINER_KS_VOL/keystone.conf /etc/keystone
+    chmod 644 /etc/keystone/keystone.conf
+fi
+
 crudini --set /etc/keystone/keystone.conf DEFAULT admin_token $ADMIN_TOKEN
 
 CONT_IP_ADDRESS=`ifconfig eth0 | grep "inet addr:" | cut -d : -f 2 | cut -d " " -f 1`
+CONT_HOSTNAME=`hostname -f`
+
+ETC_SSL_PRESENT=`crudini --get /etc/keystone/keystone.conf ssl`
+
+if crudini --get /etc/keystone/keystone.conf ssl enable; then
+    ETC_SSL_PRESENT=true
+else
+    ETC_SSL_PRESENT=false
+fi
 
 declare -A ssl_aaray
 
@@ -21,10 +37,12 @@ ssl_aaray["ca_key"]="/etc/keystone/ssl/private/cakey.pem"
 ssl_aaray["cert_required"]="false"
 ssl_aaray["key_size"]="2048"
 ssl_aaray["valid_days"]="3650"
-ssl_aaray["cert_subject"]="/C=US/ST=Unset/L=Unset/O=Unset/CN=$CONT_IP_ADDRESS"
+ssl_aaray["cert_subject"]="/C=US/ST=Unset/L=Unset/O=Unset/CN=$CONT_HOSTNAME"
 
 for key in ${!ssl_aaray[@]}; do
-    crudini --set /etc/keystone/keystone.conf ssl ${key} ${ssl_aaray[${key}]}
+    if [ "$ETC_SSL_PRESENT" = false ]; then
+        crudini --set /etc/keystone/keystone.conf ssl ${key} ${ssl_aaray[${key}]}
+    fi
 done
 
 if [ -n "$LDAP_URL" ]; then
@@ -44,7 +62,10 @@ if [ -n "$LDAP_URL" ]; then
     done
 fi
 
-mv /etc/keystone/ssl /etc/keystone/ssl.orig
-keystone-manage ssl_setup --keystone-user keystone --keystone-group keystone
-cp /etc/keystone/ssl/certs/ca.pem /usr/local/keystone/certs
+if [ "$ETC_SSL_PRESENT" = false ]; then
+    keystone-manage ssl_setup --keystone-user keystone --keystone-group keystone --rebuild
+    mkdir -p $CONTAINER_KS_VOL/certs
+    cp /etc/keystone/ssl/certs/ca.pem $CONTAINER_KS_VOL/certs
+fi
+
 keystone-all --debug --config-file=/etc/keystone/keystone.conf --log-file=/var/log/keystone/keystone.log

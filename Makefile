@@ -1,5 +1,5 @@
 NAME = mkumatag/keystone
-VERSION = 0.1.0
+VERSION = 0.1.1
 
 ARCH=$(shell uname -i)
 
